@@ -1,5 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+const TripMap = lazy(() => import("@/components/TripMap"));
+
+function MapPanel(props: {
+  current: GeoPoint | null;
+  base: BaseLocation | null;
+  points: GeoPoint[];
+}) {
+  const fallback = (
+    <div className="flex h-64 w-full items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
+      Carregando mapa…
+    </div>
+  );
+  return (
+    <ClientOnly fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <TripMap {...props} />
+      </Suspense>
+    </ClientOnly>
+  );
+}
+
 
 import {
   MAX_ACCURACY_M,
@@ -322,6 +344,7 @@ function TripTab({
 
   return (
     <>
+      <MapPanel current={current} base={base} points={active?.points ?? []} />
       <div className="grid grid-cols-2 gap-3">
         <Stat value={`${formatKm(active?.distanceM ?? 0)} km`} text="Rodados nesta corrida" />
         <Stat value={formatDuration(elapsed)} text="Tempo em corrida" />
