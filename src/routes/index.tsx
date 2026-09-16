@@ -344,6 +344,7 @@ function TripTab({
 
   return (
     <>
+      <MapPanel current={current} base={base} points={active?.points ?? []} />
       <div className="grid grid-cols-2 gap-3">
         <Stat value={`${formatKm(active?.distanceM ?? 0)} km`} text="Rodados nesta corrida" />
         <Stat value={formatDuration(elapsed)} text="Tempo em corrida" />
