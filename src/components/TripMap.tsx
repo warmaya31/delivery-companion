@@ -3,14 +3,24 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import type { BaseLocation, GeoPoint } from "@/lib/trips";
+import type { Empresa } from "@/lib/empresas";
 
 type Props = {
   current: GeoPoint | null;
   base: BaseLocation | null;
   points: GeoPoint[];
+  empresas?: Empresa[];
+  /** empresa já marcada como entregue nesta corrida */
+  entregueEmpresaId?: string | null;
 };
 
-export default function TripMap({ current, base, points }: Props) {
+export default function TripMap({
+  current,
+  base,
+  points,
+  empresas = [],
+  entregueEmpresaId = null,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -61,6 +71,27 @@ export default function TripMap({ current, base, points }: Props) {
       }).addTo(layer);
     }
 
+    for (const e of empresas) {
+      const entregue = entregueEmpresaId === e.id;
+      const cor = entregue ? "#22c55e" : "#60a5fa";
+      L.circle([e.lat, e.lng], {
+        radius: e.raioM,
+        color: cor,
+        weight: 1,
+        dashArray: "4 4",
+        fillOpacity: 0.08,
+      }).addTo(layer);
+      L.circleMarker([e.lat, e.lng], {
+        radius: 7,
+        color: "#0b1220",
+        weight: 2,
+        fillColor: cor,
+        fillOpacity: 1,
+      })
+        .addTo(layer)
+        .bindTooltip(entregue ? `${e.nome} — entregue` : e.nome, { permanent: entregue });
+    }
+
     if (points.length > 1) {
       L.polyline(
         points.map((p) => [p.lat, p.lng] as [number, number]),
@@ -86,7 +117,7 @@ export default function TripMap({ current, base, points }: Props) {
         map.panTo([current.lat, current.lng]);
       }
     }
-  }, [current, base, points]);
+  }, [current, base, points, empresas, entregueEmpresaId]);
 
   return (
     <div
