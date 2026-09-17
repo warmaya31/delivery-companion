@@ -14,16 +14,203 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      corridas: {
+        Row: {
+          base_to_end_m: number | null
+          created_at: string
+          device_id: string
+          device_trip_id: string
+          distance_m: number
+          empresa_id: string | null
+          empresa_nome: string | null
+          end_lat: number | null
+          end_lng: number | null
+          ended_at: string | null
+          entregue_em: string | null
+          id: string
+          label: string | null
+          motoboy_id: string | null
+          motoboy_nome: string | null
+          start_lat: number | null
+          start_lng: number | null
+          started_at: string
+        }
+        Insert: {
+          base_to_end_m?: number | null
+          created_at?: string
+          device_id: string
+          device_trip_id: string
+          distance_m?: number
+          empresa_id?: string | null
+          empresa_nome?: string | null
+          end_lat?: number | null
+          end_lng?: number | null
+          ended_at?: string | null
+          entregue_em?: string | null
+          id?: string
+          label?: string | null
+          motoboy_id?: string | null
+          motoboy_nome?: string | null
+          start_lat?: number | null
+          start_lng?: number | null
+          started_at: string
+        }
+        Update: {
+          base_to_end_m?: number | null
+          created_at?: string
+          device_id?: string
+          device_trip_id?: string
+          distance_m?: number
+          empresa_id?: string | null
+          empresa_nome?: string | null
+          end_lat?: number | null
+          end_lng?: number | null
+          ended_at?: string | null
+          entregue_em?: string | null
+          id?: string
+          label?: string | null
+          motoboy_id?: string | null
+          motoboy_nome?: string | null
+          start_lat?: number | null
+          start_lng?: number | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corridas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          created_at: string
+          created_by_device: string | null
+          endereco: string | null
+          id: string
+          lat: number
+          lng: number
+          nome: string
+          raio_m: number
+        }
+        Insert: {
+          created_at?: string
+          created_by_device?: string | null
+          endereco?: string | null
+          id?: string
+          lat: number
+          lng: number
+          nome: string
+          raio_m?: number
+        }
+        Update: {
+          created_at?: string
+          created_by_device?: string | null
+          endereco?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          nome?: string
+          raio_m?: number
+        }
+        Relationships: []
+      }
+      posicoes: {
+        Row: {
+          acc: number | null
+          device_id: string
+          em_corrida: boolean
+          id: string
+          lat: number
+          lng: number
+          motoboy_id: string | null
+          motoboy_nome: string | null
+          registrado_em: string
+        }
+        Insert: {
+          acc?: number | null
+          device_id: string
+          em_corrida?: boolean
+          id?: string
+          lat: number
+          lng: number
+          motoboy_id?: string | null
+          motoboy_nome?: string | null
+          registrado_em?: string
+        }
+        Update: {
+          acc?: number | null
+          device_id?: string
+          em_corrida?: boolean
+          id?: string
+          lat?: number
+          lng?: number
+          motoboy_id?: string | null
+          motoboy_nome?: string | null
+          registrado_em?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          id: string
+          nome: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          id: string
+          nome?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          nome?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "motoboy"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +337,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "motoboy"],
+    },
   },
 } as const
