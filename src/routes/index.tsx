@@ -564,7 +564,7 @@ function ConfigTab({
           {current ? `${current.lat.toFixed(5)}, ${current.lng.toFixed(5)}` : "aguardando GPS"}
         </p>
         <p className="text-xs text-muted-foreground">
-          {pending} corrida(s) guardada(s) no celular esperando o painel do administrador.
+          {pending} corrida(s) salvas
         </p>
       </section>
     </>
