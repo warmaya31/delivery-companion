@@ -19,8 +19,13 @@ export type Trip = {
   baseToEndM: number | null;
   leftBase: boolean;
   returnedToBase: boolean;
+  /** empresa reconhecida automaticamente na chegada */
+  empresaId?: string | null;
+  empresaNome?: string | null;
+  entregueEm?: number | null;
   pendingSync: boolean;
 };
+
 
 export type BaseLocation = {
   lat: number;
@@ -148,6 +153,8 @@ export function tripsToCsv(trips: Trip[]): string {
     "id",
     "motoboy",
     "entrega",
+    "empresa",
+    "entregue_as",
     "data",
     "inicio",
     "fim",
@@ -162,6 +169,8 @@ export function tripsToCsv(trips: Trip[]): string {
       t.id,
       t.deviceId,
       t.label.replace(/;/g, ","),
+      (t.empresaNome ?? "").replace(/;/g, ","),
+      t.entregueEm ? formatTime(t.entregueEm) : "",
       formatDay(t.startedAt),
       formatTime(t.startedAt),
       t.endedAt ? formatTime(t.endedAt) : "",
@@ -174,3 +183,4 @@ export function tripsToCsv(trips: Trip[]): string {
   );
   return [head, ...rows].join("\n");
 }
+
