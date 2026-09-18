@@ -1,27 +1,5 @@
-import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-const TripMap = lazy(() => import("@/components/TripMap"));
-
-function MapPanel(props: {
-  current: GeoPoint | null;
-  base: BaseLocation | null;
-  points: GeoPoint[];
-}) {
-  const fallback = (
-    <div className="flex h-64 w-full items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
-      Carregando mapa…
-    </div>
-  );
-  return (
-    <ClientOnly fallback={fallback}>
-      <Suspense fallback={fallback}>
-        <TripMap {...props} />
-      </Suspense>
-    </ClientOnly>
-  );
-}
-
 
 import {
   MAX_ACCURACY_M,
@@ -43,7 +21,40 @@ import {
   type GeoPoint,
   type Trip,
 } from "@/lib/trips";
-import { syncPendingTrips } from "@/lib/sync";
+import {
+  addEmpresa,
+  buscarLugares,
+  empresaNoPonto,
+  fetchEmpresas,
+  loadEmpresas,
+  removeEmpresa,
+  type Empresa,
+  type ResultadoBusca,
+} from "@/lib/empresas";
+import { pushPosition, syncPendingTrips } from "@/lib/sync";
+
+const TripMap = lazy(() => import("@/components/TripMap"));
+
+function MapPanel(props: {
+  current: GeoPoint | null;
+  base: BaseLocation | null;
+  points: GeoPoint[];
+  empresas: Empresa[];
+  entregueEmpresaId: string | null;
+}) {
+  const fallback = (
+    <div className="flex h-64 w-full items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
+      Carregando mapa…
+    </div>
+  );
+  return (
+    <ClientOnly fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <TripMap {...props} />
+      </Suspense>
+    </ClientOnly>
+  );
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,20 +63,22 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Registre entregas e conte os km rodados pelo GPS, mesmo sem internet. Base fixa da operação, histórico do dia e exportação em CSV.",
+          "Registre entregas e conte os km rodados pelo GPS, mesmo sem internet. Empresas cadastradas com confirmação automática de entrega, base fixa da operação e histórico do dia.",
       },
       { property: "og:title", content: "KM Motoboy — contador de km offline para entregas" },
       {
         property: "og:description",
         content:
-          "Inicie a corrida, o app conta os km pelo GPS e salva tudo no celular. Funciona offline.",
+          "Inicie a corrida, o app conta os km pelo GPS e confirma sozinho a chegada na empresa. Funciona offline.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Index,
 });
 
-type Tab = "corrida" | "historico" | "config";
+type Tab = "corrida" | "empresas" | "historico" | "config";
 
 function Index() {
   const [tab, setTab] = useState<Tab>("corrida");
@@ -74,6 +87,7 @@ function Index() {
   const [base, setBase] = useState<BaseLocation | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [active, setActive] = useState<Trip | null>(null);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [label, setLabel] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [current, setCurrent] = useState<GeoPoint | null>(null);
@@ -82,9 +96,11 @@ function Index() {
   const watchRef = useRef<number | null>(null);
   const activeRef = useRef<Trip | null>(null);
   const baseRef = useRef<BaseLocation | null>(null);
+  const empresasRef = useRef<Empresa[]>([]);
 
   activeRef.current = active;
   baseRef.current = base;
+  empresasRef.current = empresas;
 
   // Carrega tudo do aparelho (nunca durante o render)
   useEffect(() => {
@@ -92,8 +108,10 @@ function Index() {
     setBase(loadBase());
     setTrips(loadTrips());
     setActive(loadActiveTrip());
+    setEmpresas(loadEmpresas());
     setReady(true);
     void syncPendingTrips().then((r) => setPending(r.pending));
+    void fetchEmpresas().then(setEmpresas);
   }, []);
 
   const persistActive = useCallback((trip: Trip | null) => {
@@ -110,6 +128,7 @@ function Index() {
     };
     setCurrent(point);
     setStatus(null);
+    void pushPosition(point, activeRef.current != null);
 
     const trip = activeRef.current;
     if (!trip) return;
@@ -137,6 +156,21 @@ function Index() {
       else if (leftBase && distFromBase <= b.radiusM) returnedToBase = true;
     }
 
+    // Reconhece sozinho a chegada em uma empresa cadastrada
+    let empresaId = trip.empresaId ?? null;
+    let empresaNome = trip.empresaNome ?? null;
+    let entregueEm = trip.entregueEm ?? null;
+    if (!entregueEm) {
+      const achou = empresaNoPonto(point, empresasRef.current);
+      const longeDaBase = !b || haversineM(b, point) > b.radiusM;
+      if (achou && longeDaBase) {
+        empresaId = achou.empresa.id;
+        empresaNome = achou.empresa.nome;
+        entregueEm = point.t;
+        setStatus(`Chegada em ${achou.empresa.nome} — entrega marcada automaticamente.`);
+      }
+    }
+
     const updated: Trip = {
       ...trip,
       points,
@@ -146,6 +180,9 @@ function Index() {
       baseToEndM: b ? haversineM(b, point) : null,
       leftBase,
       returnedToBase,
+      empresaId,
+      empresaNome,
+      entregueEm,
     };
     setActive(updated);
     saveActiveTrip(updated);
@@ -193,6 +230,9 @@ function Index() {
       baseToEndM: base && current ? haversineM(base, current) : null,
       leftBase: false,
       returnedToBase: false,
+      empresaId: null,
+      empresaNome: null,
+      entregueEm: null,
       pendingSync: true,
     };
     persistActive(trip);
@@ -206,7 +246,7 @@ function Index() {
     setTrips(next);
     saveTrips(next);
     persistActive(null);
-    setPending((p) => p + 1);
+    void syncPendingTrips().then((r) => setPending(r.pending));
     setTab("historico");
   };
 
@@ -231,25 +271,34 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border px-4 pt-6 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight">KM Motoboy</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Conta os km pelo GPS e salva no próprio celular — funciona sem internet.
-        </p>
+      <header className="flex items-start justify-between gap-3 border-b border-border px-4 pt-6 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">KM Motoboy</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Conta os km pelo GPS e confirma sozinho a chegada na empresa.
+          </p>
+        </div>
+        <Link
+          to="/auth"
+          className="shrink-0 rounded-lg border border-input bg-card px-3 py-2 text-xs font-semibold"
+        >
+          Painel adm
+        </Link>
       </header>
 
       <nav className="sticky top-0 z-10 flex gap-1 border-b border-border bg-background px-2 py-2">
         {(
           [
             ["corrida", "Corrida"],
+            ["empresas", "Empresas"],
             ["historico", "Histórico"],
-            ["config", "Configurações"],
+            ["config", "Ajustes"],
           ] as const
         ).map(([value, text]) => (
           <button
             key={value}
             onClick={() => setTab(value)}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-md px-2 py-2 text-xs font-semibold transition-colors ${
               tab === value
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground"
@@ -272,6 +321,7 @@ function Index() {
             active={active}
             base={base}
             current={current}
+            empresas={empresas}
             elapsed={elapsed}
             label={label}
             onLabel={setLabel}
@@ -280,9 +330,16 @@ function Index() {
           />
         )}
 
-        {tab === "historico" && (
-          <HistoryTab trips={trips} pending={pending} />
+        {tab === "empresas" && (
+          <EmpresasTab
+            empresas={empresas}
+            current={current}
+            onChange={setEmpresas}
+            onStatus={setStatus}
+          />
         )}
+
+        {tab === "historico" && <HistoryTab trips={trips} pending={pending} />}
 
         {tab === "config" && (
           <ConfigTab
@@ -317,6 +374,7 @@ function TripTab({
   active,
   base,
   current,
+  empresas,
   elapsed,
   label,
   onLabel,
@@ -326,6 +384,7 @@ function TripTab({
   active: Trip | null;
   base: BaseLocation | null;
   current: GeoPoint | null;
+  empresas: Empresa[];
   elapsed: number;
   label: string;
   onLabel: (v: string) => void;
@@ -342,17 +401,29 @@ function TripTab({
   const avgKmh =
     active && elapsed > 5000 ? (active.distanceM / 1000) / (elapsed / 3600000) : 0;
 
+  const proxima = useMemo(() => {
+    if (!current || empresas.length === 0) return null;
+    const ordenadas = empresas
+      .map((e) => ({ e, d: haversineM(current, e) }))
+      .sort((a, b) => a.d - b.d);
+    return ordenadas[0] ?? null;
+  }, [current, empresas]);
+
   return (
     <>
-      <MapPanel current={current} base={base} points={active?.points ?? []} />
+      <MapPanel
+        current={current}
+        base={base}
+        points={active?.points ?? []}
+        empresas={empresas}
+        entregueEmpresaId={active?.empresaId ?? null}
+      />
       <div className="grid grid-cols-2 gap-3">
         <Stat value={`${formatKm(active?.distanceM ?? 0)} km`} text="Rodados nesta corrida" />
         <Stat value={formatDuration(elapsed)} text="Tempo em corrida" />
         <Stat value={`${avgKmh.toFixed(1).replace(".", ",")} km/h`} text="Velocidade média" />
         <Stat
-          value={
-            current?.acc != null ? `±${Math.round(current.acc)} m` : "—"
-          }
+          value={current?.acc != null ? `±${Math.round(current.acc)} m` : "—"}
           text="Precisão do GPS"
         />
       </div>
@@ -364,6 +435,19 @@ function TripTab({
             <p className="mt-1 text-xs text-muted-foreground">
               Início às {formatTime(active.startedAt)}
             </p>
+            {active.entregueEm ? (
+              <p className="mt-2 text-xs font-semibold text-accent">
+                Entregue em {active.empresaNome} às {formatTime(active.entregueEm)}
+              </p>
+            ) : proxima ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Empresa mais próxima: {proxima.e.nome} · {formatKm(proxima.d)} km
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Cadastre empresas para o app confirmar a entrega sozinho.
+              </p>
+            )}
             {base && (
               <p className="mt-2 text-xs text-muted-foreground">
                 {active.baseToEndM != null
@@ -405,12 +489,167 @@ function TripTab({
           </button>
           {!base && (
             <p className="text-xs text-muted-foreground">
-              Dica: cadastre a base da operação em Configurações para o app medir a
-              ida e a volta automaticamente.
+              Dica: cadastre a base da operação em Ajustes para o app medir a ida e a volta
+              automaticamente.
             </p>
           )}
         </>
       )}
+    </>
+  );
+}
+
+function EmpresasTab({
+  empresas,
+  current,
+  onChange,
+  onStatus,
+}: {
+  empresas: Empresa[];
+  current: GeoPoint | null;
+  onChange: (list: Empresa[]) => void;
+  onStatus: (msg: string | null) => void;
+}) {
+  const [nome, setNome] = useState("");
+  const [raio, setRaio] = useState(200);
+  const [busca, setBusca] = useState("");
+  const [resultados, setResultados] = useState<ResultadoBusca[]>([]);
+  const [buscando, setBuscando] = useState(false);
+
+  const cadastrarAqui = async () => {
+    if (!current) {
+      onStatus("Aguardando o GPS pegar sua posição.");
+      return;
+    }
+    const lista = await addEmpresa({
+      nome: nome || "Empresa",
+      lat: current.lat,
+      lng: current.lng,
+      raioM: raio,
+    });
+    onChange(lista);
+    setNome("");
+    onStatus("Empresa cadastrada nesta localização.");
+  };
+
+  const procurar = async () => {
+    setBuscando(true);
+    onStatus(null);
+    try {
+      setResultados(await buscarLugares(busca));
+    } catch {
+      onStatus("Não foi possível buscar agora. Sem internet? Cadastre pela sua posição.");
+    } finally {
+      setBuscando(false);
+    }
+  };
+
+  const salvarResultado = async (r: ResultadoBusca) => {
+    const lista = await addEmpresa({
+      nome: r.nome,
+      endereco: r.endereco,
+      lat: r.lat,
+      lng: r.lng,
+      raioM: raio,
+    });
+    onChange(lista);
+    setResultados([]);
+    setBusca("");
+    onStatus(`${r.nome} cadastrada. A entrega será marcada sozinha na chegada.`);
+  };
+
+  return (
+    <>
+      <section className="space-y-3 rounded-xl border border-border bg-card px-4 py-4">
+        <h2 className="text-sm font-semibold">Buscar empresa pelo nome ou endereço</h2>
+        <div className="flex gap-2">
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Ex.: Retífica São Jorge, Rua X, 100"
+            className="flex-1 rounded-lg border border-input bg-background px-3 py-3 text-base outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button
+            onClick={procurar}
+            disabled={buscando || busca.trim().length < 3}
+            className="rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {buscando ? "…" : "Buscar"}
+          </button>
+        </div>
+        {resultados.map((r, i) => (
+          <button
+            key={`${r.lat}-${r.lng}-${i}`}
+            onClick={() => void salvarResultado(r)}
+            className="block w-full rounded-lg border border-input bg-background px-3 py-2 text-left"
+          >
+            <span className="block text-sm font-semibold">{r.nome}</span>
+            <span className="block text-xs text-muted-foreground">{r.endereco}</span>
+          </button>
+        ))}
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-border bg-card px-4 py-4">
+        <h2 className="text-sm font-semibold">Cadastrar onde você está</h2>
+        <input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Nome da mecânica ou retífica"
+          className="w-full rounded-lg border border-input bg-background px-3 py-3 text-base outline-none focus:ring-2 focus:ring-ring"
+        />
+        <label className="block">
+          <span className="text-xs text-muted-foreground">
+            Distância que conta como chegada: {raio} m
+          </span>
+          <input
+            type="range"
+            min={50}
+            max={600}
+            step={10}
+            value={raio}
+            onChange={(e) => setRaio(Number(e.target.value))}
+            className="mt-2 w-full accent-primary"
+          />
+        </label>
+        <button
+          onClick={() => void cadastrarAqui()}
+          className="w-full rounded-lg bg-accent px-4 py-4 text-base font-bold text-accent-foreground"
+        >
+          Usar minha posição atual
+        </button>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Empresas cadastradas ({empresas.length})</h2>
+        {empresas.length === 0 ? (
+          <p className="rounded-xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
+            Nenhuma empresa cadastrada. Depois de cadastrar, o app reconhece a chegada pela
+            localização, sem você precisar escolher nada.
+          </p>
+        ) : (
+          empresas.map((e) => (
+            <article
+              key={e.id}
+              className="flex items-baseline justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3"
+            >
+              <div>
+                <p className="text-sm font-semibold">{e.nome}</p>
+                <p className="text-xs text-muted-foreground">
+                  {e.endereco ?? `${e.lat.toFixed(5)}, ${e.lng.toFixed(5)}`} · chegada em{" "}
+                  {e.raioM} m
+                  {current ? ` · ${formatKm(haversineM(current, e))} km de você` : ""}
+                </p>
+              </div>
+              <button
+                onClick={() => onChange(removeEmpresa(e.id))}
+                className="text-xs text-muted-foreground underline"
+              >
+                Apagar
+              </button>
+            </article>
+          ))
+        )}
+      </section>
     </>
   );
 }
@@ -459,8 +698,7 @@ function HistoryTab({ trips, pending }: { trips: Trip[]; pending: number }) {
       </button>
       {pending > 0 && (
         <p className="text-xs text-muted-foreground">
-          {pending} corrida(s) aguardando envio para o painel — serão enviadas quando o
-          login do administrador for ativado.
+          {pending} corrida(s) aguardando internet para chegar ao painel do administrador.
         </p>
       )}
       {groups.map(([day, dayTrips]) => (
@@ -472,10 +710,7 @@ function HistoryTab({ trips, pending }: { trips: Trip[]; pending: number }) {
             </span>
           </h2>
           {dayTrips.map((t) => (
-            <article
-              key={t.id}
-              className="rounded-xl border border-border bg-card px-4 py-3"
-            >
+            <article key={t.id} className="rounded-xl border border-border bg-card px-4 py-3">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-sm font-semibold">{t.label}</p>
                 <p className="text-sm font-bold tabular-nums">{formatKm(t.distanceM)} km</p>
@@ -486,6 +721,11 @@ function HistoryTab({ trips, pending }: { trips: Trip[]; pending: number }) {
                 {formatDuration((t.endedAt ?? t.startedAt) - t.startedAt)}
                 {t.baseToEndM != null ? ` · ${formatKm(t.baseToEndM)} km da base` : ""}
               </p>
+              {t.entregueEm && (
+                <p className="mt-1 text-xs font-semibold text-accent">
+                  Entregue em {t.empresaNome} às {formatTime(t.entregueEm)}
+                </p>
+              )}
             </article>
           ))}
         </section>
@@ -563,9 +803,7 @@ function ConfigTab({
           Posição atual:{" "}
           {current ? `${current.lat.toFixed(5)}, ${current.lng.toFixed(5)}` : "aguardando GPS"}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {pending} corrida(s) salvas
-        </p>
+        <p className="text-xs text-muted-foreground">{pending} corrida(s) salvas</p>
       </section>
     </>
   );

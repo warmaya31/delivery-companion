@@ -18,10 +18,11 @@ async function pushTrip(trip: Trip): Promise<boolean> {
       end_lng: trip.endPoint?.lng ?? null,
       empresa_id:
         trip.empresaId && !trip.empresaId.startsWith("local_") ? trip.empresaId : null,
-      empresa_nome: trip.empresaNome,
+      empresa_nome: trip.empresaNome ?? null,
       entregue_em: trip.entregueEm ? new Date(trip.entregueEm).toISOString() : null,
       base_to_end_m: trip.baseToEndM,
     });
+
     // 23505 = já existia no painel; considera enviada
     if (error && error.code !== "23505") return false;
     return true;
