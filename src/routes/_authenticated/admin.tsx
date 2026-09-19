@@ -152,7 +152,80 @@ function AdminPage() {
           <Card value={String(empresas.length)} text="Empresas cadastradas" />
         </div>
 
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Cadastro de motoboys (por convite)</h2>
+          <div className="space-y-2 rounded-xl border border-border bg-card px-4 py-4">
+            <input
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+              placeholder="Nome do motoboy"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
+            <input
+              value={novoTelefone}
+              onChange={(e) => setNovoTelefone(e.target.value)}
+              placeholder="Telefone (opcional)"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
+            <button
+              onClick={criarMotoboy}
+              className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+            >
+              Gerar link de acesso
+            </button>
+            <p className="text-xs text-muted-foreground">
+              Envie o link ao motoboy. Só quem abrir o link consegue usar o app.
+            </p>
+          </div>
+
+          {cadastrados.map((m) => (
+            <article key={m.id} className="space-y-2 rounded-xl border border-border bg-card px-4 py-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">{m.nome}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {m.telefone ? `${m.telefone} · ` : ""}
+                    {m.ativado_em
+                      ? `acesso ativado em ${formatDay(new Date(m.ativado_em).getTime())}`
+                      : "ainda não abriu o link"}
+                    {m.ativo ? "" : " · desativado"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-3">
+                  <button
+                    onClick={() => copiarLink(m.token)}
+                    className="text-xs font-semibold text-primary underline"
+                  >
+                    Copiar link
+                  </button>
+                  <button
+                    onClick={() => alternarAtivo(m)}
+                    className="text-xs text-muted-foreground underline"
+                  >
+                    {m.ativo ? "Desativar" : "Reativar"}
+                  </button>
+                  <button
+                    onClick={() => apagarMotoboy(m.id)}
+                    className="text-xs text-muted-foreground underline"
+                  >
+                    Apagar
+                  </button>
+                </div>
+              </div>
+              <p className="break-all rounded-lg bg-secondary px-2 py-1 text-[11px] text-secondary-foreground">
+                {linkDe(m.token)}
+              </p>
+            </article>
+          ))}
+          {cadastrados.length === 0 && (
+            <p className="rounded-xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
+              Nenhum motoboy cadastrado ainda.
+            </p>
+          )}
+        </section>
+
         <section className="space-y-2">
+
           <h2 className="text-sm font-semibold">Motoboys</h2>
           {motoboys.length === 0 ? (
             <p className="rounded-xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
