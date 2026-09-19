@@ -34,17 +34,29 @@ type Corrida = {
   entregue_em: string | null;
 };
 
+type MotoboyCadastrado = {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  token: string;
+  ativo: boolean;
+  ativado_em: string | null;
+};
+
 function AdminPage() {
   const navigate = useNavigate();
   const [posicoes, setPosicoes] = useState<Posicao[]>([]);
   const [corridas, setCorridas] = useState<Corrida[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [cadastrados, setCadastrados] = useState<MotoboyCadastrado[]>([]);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoTelefone, setNovoTelefone] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
 
   const carregar = useCallback(async () => {
     setErro(null);
-    const [pos, cor, emp] = await Promise.all([
+    const [pos, cor, emp, mot] = await Promise.all([
       supabase
         .from("posicoes")
         .select("device_id,motoboy_nome,lat,lng,em_corrida,registrado_em")
@@ -58,8 +70,12 @@ function AdminPage() {
         .order("started_at", { ascending: false })
         .limit(100),
       fetchEmpresas(),
+      supabase
+        .from("motoboys")
+        .select("id,nome,telefone,token,ativo,ativado_em")
+        .order("created_at", { ascending: false }),
     ]);
-    if (pos.error || cor.error) {
+    if (pos.error || cor.error || mot.error) {
       setErro(
         "Esta conta ainda não tem permissão de administrador para ver os dados dos motoboys.",
       );
@@ -67,8 +83,51 @@ function AdminPage() {
     setPosicoes((pos.data as Posicao[] | null) ?? []);
     setCorridas((cor.data as Corrida[] | null) ?? []);
     setEmpresas(emp);
+    setCadastrados((mot.data as MotoboyCadastrado[] | null) ?? []);
     setCarregando(false);
   }, []);
+
+  const linkDe = (token: string) =>
+    typeof window === "undefined" ? "" : `${window.location.origin}/?convite=${token}`;
+
+  const copiarLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(linkDe(token));
+      setErro("Link copiado. Envie para o motoboy.");
+    } catch {
+      setErro("Copie o link mostrado abaixo do nome.");
+    }
+  };
+
+  const criarMotoboy = async () => {
+    const nome = novoNome.trim();
+    if (!nome) {
+      setErro("Escreva o nome do motoboy.");
+      return;
+    }
+    const { error } = await supabase
+      .from("motoboys")
+      .insert({ nome, telefone: novoTelefone.trim() || null });
+    if (error) {
+      setErro("Não foi possível cadastrar o motoboy agora.");
+      return;
+    }
+    setNovoNome("");
+    setNovoTelefone("");
+    await carregar();
+  };
+
+  const alternarAtivo = async (m: MotoboyCadastrado) => {
+    await supabase.from("motoboys").update({ ativo: !m.ativo }).eq("id", m.id);
+    await carregar();
+  };
+
+  const apagarMotoboy = async (id: string) => {
+    await supabase.from("motoboys").delete().eq("id", id);
+    await carregar();
+  };
+
+
 
   useEffect(() => {
     void carregar();
