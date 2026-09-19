@@ -62,14 +62,18 @@ export async function pushPosition(point: GeoPoint, emCorrida: boolean) {
   if (agora - ultimoEnvio < 60000) return;
   ultimoEnvio = agora;
   try {
+    const motoboy = loadMotoboy();
     await supabase.from("posicoes").insert({
       device_id: getDeviceId(),
+      motoboy_ref: motoboy?.id ?? null,
+      motoboy_nome: motoboy?.nome ?? null,
       lat: point.lat,
       lng: point.lng,
       acc: point.acc ?? null,
       em_corrida: emCorrida,
       registrado_em: new Date(point.t).toISOString(),
     });
+
   } catch {
     ultimoEnvio = 0;
   }
