@@ -7,6 +7,22 @@ import { getDeviceId, loadTrips, saveTrips, type GeoPoint, type Trip } from "./t
 async function pushTrip(trip: Trip): Promise<boolean> {
   try {
     const motoboy = loadMotoboy();
+    const temDestinos = trip.destinos && trip.destinos.length > 0;
+    const empresaNomeResumo = temDestinos
+      ? trip.destinos!.map((d) => d.empresaNome).join(", ")
+      : trip.empresaNome ?? null;
+
+    const totalValor = temDestinos
+      ? trip.destinos!.reduce((sum, d) => sum + (d.valor ?? 0), 0)
+      : trip.valor ?? null;
+
+    const primaryEmpresaId =
+      trip.empresaId && !trip.empresaId.startsWith("local_")
+        ? trip.empresaId
+        : temDestinos && !trip.destinos![0].empresaId.startsWith("local_")
+          ? trip.destinos![0].empresaId
+          : null;
+
     const { error } = await supabase.from("corridas").insert({
       device_id: trip.deviceId || getDeviceId(),
       motoboy_ref: motoboy?.id ?? null,
@@ -21,12 +37,12 @@ async function pushTrip(trip: Trip): Promise<boolean> {
       start_lng: trip.startPoint?.lng ?? null,
       end_lat: trip.endPoint?.lat ?? null,
       end_lng: trip.endPoint?.lng ?? null,
-      empresa_id:
-        trip.empresaId && !trip.empresaId.startsWith("local_") ? trip.empresaId : null,
-      empresa_nome: trip.empresaNome ?? null,
+      empresa_id: primaryEmpresaId,
+      empresa_nome: empresaNomeResumo,
       entregue_em: trip.entregueEm ? new Date(trip.entregueEm).toISOString() : null,
       base_to_end_m: trip.baseToEndM,
-      valor: trip.valor ?? null,
+      valor: totalValor,
+      destinos: (trip.destinos as any) ?? null,
     });
 
     // 23505 = já existia no painel; considera enviada

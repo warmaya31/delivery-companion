@@ -147,6 +147,18 @@ export function empresaNoPonto(
   return melhor;
 }
 
+const CITY_KEY = "mb.selected_city";
+
+export function loadSavedCity(): string {
+  if (!isBrowser()) return "";
+  return window.localStorage.getItem(CITY_KEY) || "";
+}
+
+export function saveCity(city: string) {
+  if (!isBrowser()) return;
+  window.localStorage.setItem(CITY_KEY, city);
+}
+
 export type ResultadoBusca = {
   nome: string;
   endereco: string;
@@ -154,11 +166,15 @@ export type ResultadoBusca = {
   lng: number;
 };
 
-/** Busca endereços/empresas no mapa livre do OpenStreetMap (gratuito). */
-export async function buscarLugares(q: string): Promise<ResultadoBusca[]> {
+/** Busca endereços/empresas no mapa livre do OpenStreetMap (gratuito) filtrando por cidade opcional. */
+export async function buscarLugares(q: string, cidade?: string): Promise<ResultadoBusca[]> {
   const termo = q.trim();
   if (termo.length < 3) return [];
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&addressdetails=1&countrycodes=br&q=${encodeURIComponent(termo)}`;
+  const queryCompleta =
+    cidade && cidade.trim() ? `${termo}, ${cidade.trim()}, Brasil` : `${termo}, Brasil`;
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=1&countrycodes=br&q=${encodeURIComponent(
+    queryCompleta,
+  )}`;
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) throw new Error("busca indisponível");
   const data = (await res.json()) as Array<{
@@ -168,9 +184,25 @@ export async function buscarLugares(q: string): Promise<ResultadoBusca[]> {
     lon: string;
   }>;
   return data.map((d) => ({
-    nome: d.name && d.name.length > 0 ? d.name : d.display_name.split(",")[0]!,
+    nome: d.name && d.name.length > 0 ? d.name : d.display_name.split(",")[0]!.trim(),
     endereco: d.display_name,
     lat: Number(d.lat),
     lng: Number(d.lon),
   }));
+}
+
+/** Obtém endereço aproximado a partir de coordenadas (geocodificação reversa). */
+export async function buscarEnderecoPorCoordenadas(
+  lat: number,
+  lng: number,
+): Promise<string | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { display_name?: string };
+    return data.display_name || null;
+  } catch {
+    return null;
+  }
 }

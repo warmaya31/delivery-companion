@@ -36,6 +36,7 @@ export type Database = {
           start_lng: number | null
           started_at: string
           valor: number | null
+          destinos: Json | null
         }
         Insert: {
           base_to_end_m?: number | null
@@ -58,6 +59,7 @@ export type Database = {
           start_lng?: number | null
           started_at: string
           valor?: number | null
+          destinos?: Json | null
         }
         Update: {
           base_to_end_m?: number | null
@@ -80,6 +82,7 @@ export type Database = {
           start_lng?: number | null
           started_at?: string
           valor?: number | null
+          destinos?: Json | null
         }
         Relationships: [
           {
@@ -272,6 +275,13 @@ export type Database = {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      verificar_motoboy_ativo: {
+        Args: {
+          _id?: string | null
+          _token?: string | null
         }
         Returns: boolean
       }

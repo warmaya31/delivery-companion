@@ -5,6 +5,16 @@ export type GeoPoint = {
   acc?: number;
 };
 
+export type TripDestino = {
+  empresaId: string;
+  empresaNome: string;
+  endereco?: string | null;
+  valor: number | null;
+  entregueEm?: number | null;
+  lat?: number;
+  lng?: number;
+};
+
 export type Trip = {
   id: string;
   deviceId: string;
@@ -24,6 +34,8 @@ export type Trip = {
   empresaNome?: string | null;
   entregueEm?: number | null;
   valor?: number | null;
+  /** Lista de múltiplos destinos da rota com valores individuais */
+  destinos?: TripDestino[];
   pendingSync: boolean;
 };
 
@@ -154,7 +166,8 @@ export function tripsToCsv(trips: Trip[]): string {
     "id",
     "motoboy",
     "entrega",
-    "empresa",
+    "empresas_destinos",
+    "valor_total",
     "entregue_as",
     "data",
     "inicio",
@@ -165,12 +178,23 @@ export function tripsToCsv(trips: Trip[]): string {
     "saiu_da_base",
     "voltou_a_base",
   ].join(";");
-  const rows = trips.map((t) =>
-    [
+  const rows = trips.map((t) => {
+    const destinosStr =
+      t.destinos && t.destinos.length > 0
+        ? t.destinos
+            .map(
+              (d) =>
+                `${d.empresaNome}${d.valor != null ? ` (R$ ${d.valor.toFixed(2)})` : ""}`,
+            )
+            .join(" + ")
+        : t.empresaNome ?? "";
+    const valorStr = t.valor != null ? `R$ ${t.valor.toFixed(2)}` : "-";
+    return [
       t.id,
       t.deviceId,
       t.label.replace(/;/g, ","),
-      (t.empresaNome ?? "").replace(/;/g, ","),
+      destinosStr.replace(/;/g, ","),
+      valorStr,
       t.entregueEm ? formatTime(t.entregueEm) : "",
       formatDay(t.startedAt),
       formatTime(t.startedAt),
@@ -180,8 +204,8 @@ export function tripsToCsv(trips: Trip[]): string {
       t.baseToEndM != null ? formatKm(t.baseToEndM) : "",
       t.leftBase ? "sim" : "nao",
       t.returnedToBase ? "sim" : "nao",
-    ].join(";"),
-  );
+    ].join(";");
+  });
   return [head, ...rows].join("\n");
 }
 

@@ -59,3 +59,41 @@ export async function ativarConvite(
     return { ok: false, erro: "Sem internet para validar o convite. Tente novamente." };
   }
 }
+
+/**
+ * Verifica se o motoboy continua ativo e com permissão de acesso no sistema.
+ * Retorna true se ativo, false se explicitamente bloqueado ou removido pelo admin.
+ */
+export async function checarAcessoMotoboy(m: MotoboyLocal | null): Promise<boolean> {
+  if (!m || !m.id) return false;
+  try {
+    // 1. Tentar chamar a RPC verificar_motoboy_ativo
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)(
+      "verificar_motoboy_ativo",
+      {
+        _id: m.id,
+        _token: m.token || null,
+      },
+    );
+    if (!rpcError && typeof rpcData === "boolean") {
+      return rpcData;
+    }
+
+    // 2. Fallback: consulta direta na tabela motoboys
+    const { data, error } = await supabase
+      .from("motoboys")
+      .select("id, ativo")
+      .eq("id", m.id)
+      .maybeSingle();
+
+    if (!error) {
+      if (!data) return false; // motoboy foi excluído
+      return data.ativo === true;
+    }
+
+    // Se houve erro de rede/offline, preserva a sessão offline
+    return true;
+  } catch {
+    return true;
+  }
+}
