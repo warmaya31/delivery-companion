@@ -36,9 +36,9 @@ import {
   ativarConvite,
   conviteDaUrl,
   loadMotoboy,
-  saveMotoboy,
   type MotoboyLocal,
 } from "@/lib/motoboy";
+
 
 
 const TripMap = lazy(() => import("@/components/TripMap"));
