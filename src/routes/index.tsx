@@ -100,6 +100,9 @@ function Index() {
   const [status, setStatus] = useState<string | null>(null);
   const [current, setCurrent] = useState<GeoPoint | null>(null);
   const [pending, setPending] = useState(0);
+  const [motoboy, setMotoboy] = useState<MotoboyLocal | null>(null);
+  const [checandoConvite, setChecandoConvite] = useState(true);
+  const [erroConvite, setErroConvite] = useState<string | null>(null);
 
   const watchRef = useRef<number | null>(null);
   const activeRef = useRef<Trip | null>(null);
@@ -117,10 +120,34 @@ function Index() {
     setTrips(loadTrips());
     setActive(loadActiveTrip());
     setEmpresas(loadEmpresas());
-    setReady(true);
-    void syncPendingTrips().then((r) => setPending(r.pending));
-    void fetchEmpresas().then(setEmpresas);
+
+    const salvo = loadMotoboy();
+    const token = conviteDaUrl();
+
+    const liberar = (m: MotoboyLocal | null) => {
+      setMotoboy(m);
+      setChecandoConvite(false);
+      if (!m) return;
+      setReady(true);
+      void syncPendingTrips().then((r) => setPending(r.pending));
+      void fetchEmpresas().then(setEmpresas);
+    };
+
+    if (token && (!salvo || salvo.token !== token)) {
+      void ativarConvite(token).then((r) => {
+        if (r.ok) {
+          window.history.replaceState({}, "", window.location.pathname);
+          liberar(r.motoboy);
+        } else {
+          setErroConvite(r.erro);
+          liberar(salvo);
+        }
+      });
+      return;
+    }
+    liberar(salvo);
   }, []);
+
 
   const persistActive = useCallback((trip: Trip | null) => {
     setActive(trip);
