@@ -1,4 +1,4 @@
-import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -32,6 +32,14 @@ import {
   type ResultadoBusca,
 } from "@/lib/empresas";
 import { pushPosition, syncPendingTrips } from "@/lib/sync";
+import {
+  ativarConvite,
+  conviteDaUrl,
+  loadMotoboy,
+  type MotoboyLocal,
+} from "@/lib/motoboy";
+
+
 
 const TripMap = lazy(() => import("@/components/TripMap"));
 
@@ -92,6 +100,9 @@ function Index() {
   const [status, setStatus] = useState<string | null>(null);
   const [current, setCurrent] = useState<GeoPoint | null>(null);
   const [pending, setPending] = useState(0);
+  const [motoboy, setMotoboy] = useState<MotoboyLocal | null>(null);
+  const [checandoConvite, setChecandoConvite] = useState(true);
+  const [erroConvite, setErroConvite] = useState<string | null>(null);
 
   const watchRef = useRef<number | null>(null);
   const activeRef = useRef<Trip | null>(null);
@@ -109,10 +120,34 @@ function Index() {
     setTrips(loadTrips());
     setActive(loadActiveTrip());
     setEmpresas(loadEmpresas());
-    setReady(true);
-    void syncPendingTrips().then((r) => setPending(r.pending));
-    void fetchEmpresas().then(setEmpresas);
+
+    const salvo = loadMotoboy();
+    const token = conviteDaUrl();
+
+    const liberar = (m: MotoboyLocal | null) => {
+      setMotoboy(m);
+      setChecandoConvite(false);
+      if (!m) return;
+      setReady(true);
+      void syncPendingTrips().then((r) => setPending(r.pending));
+      void fetchEmpresas().then(setEmpresas);
+    };
+
+    if (token && (!salvo || salvo.token !== token)) {
+      void ativarConvite(token).then((r) => {
+        if (r.ok) {
+          window.history.replaceState({}, "", window.location.pathname);
+          liberar(r.motoboy);
+        } else {
+          setErroConvite(r.erro);
+          liberar(salvo);
+        }
+      });
+      return;
+    }
+    liberar(salvo);
   }, []);
+
 
   const persistActive = useCallback((trip: Trip | null) => {
     setActive(trip);
@@ -269,22 +304,40 @@ function Index() {
 
   const elapsed = active ? (active.endedAt ?? Date.now()) - active.startedAt : 0;
 
+  if (checandoConvite) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center text-sm text-muted-foreground">
+        Verificando seu acesso…
+      </div>
+    );
+  }
+
+  if (!motoboy) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">KM Motoboy</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          O acesso é liberado apenas pelo link de convite enviado pelo administrador da operação.
+          Peça o seu link e abra-o neste celular.
+        </p>
+        {erroConvite && (
+          <p className="max-w-sm rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground">
+            {erroConvite}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="flex items-start justify-between gap-3 border-b border-border px-4 pt-6 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">KM Motoboy</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Conta os km pelo GPS e confirma sozinho a chegada na empresa.
-          </p>
-        </div>
-        <Link
-          to="/auth"
-          className="shrink-0 rounded-lg border border-input bg-card px-3 py-2 text-xs font-semibold"
-        >
-          Painel adm
-        </Link>
+      <header className="border-b border-border px-4 pt-6 pb-4">
+        <h1 className="text-2xl font-bold tracking-tight">KM Motoboy</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {motoboy.nome} — conta os km pelo GPS e confirma sozinho a chegada na empresa.
+        </p>
       </header>
+
 
       <nav className="sticky top-0 z-10 flex gap-1 border-b border-border bg-background px-2 py-2">
         {(

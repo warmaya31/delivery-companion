@@ -34,17 +34,29 @@ type Corrida = {
   entregue_em: string | null;
 };
 
+type MotoboyCadastrado = {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  token: string;
+  ativo: boolean;
+  ativado_em: string | null;
+};
+
 function AdminPage() {
   const navigate = useNavigate();
   const [posicoes, setPosicoes] = useState<Posicao[]>([]);
   const [corridas, setCorridas] = useState<Corrida[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [cadastrados, setCadastrados] = useState<MotoboyCadastrado[]>([]);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoTelefone, setNovoTelefone] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
 
   const carregar = useCallback(async () => {
     setErro(null);
-    const [pos, cor, emp] = await Promise.all([
+    const [pos, cor, emp, mot] = await Promise.all([
       supabase
         .from("posicoes")
         .select("device_id,motoboy_nome,lat,lng,em_corrida,registrado_em")
@@ -58,8 +70,12 @@ function AdminPage() {
         .order("started_at", { ascending: false })
         .limit(100),
       fetchEmpresas(),
+      supabase
+        .from("motoboys")
+        .select("id,nome,telefone,token,ativo,ativado_em")
+        .order("created_at", { ascending: false }),
     ]);
-    if (pos.error || cor.error) {
+    if (pos.error || cor.error || mot.error) {
       setErro(
         "Esta conta ainda não tem permissão de administrador para ver os dados dos motoboys.",
       );
@@ -67,8 +83,51 @@ function AdminPage() {
     setPosicoes((pos.data as Posicao[] | null) ?? []);
     setCorridas((cor.data as Corrida[] | null) ?? []);
     setEmpresas(emp);
+    setCadastrados((mot.data as MotoboyCadastrado[] | null) ?? []);
     setCarregando(false);
   }, []);
+
+  const linkDe = (token: string) =>
+    typeof window === "undefined" ? "" : `${window.location.origin}/?convite=${token}`;
+
+  const copiarLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(linkDe(token));
+      setErro("Link copiado. Envie para o motoboy.");
+    } catch {
+      setErro("Copie o link mostrado abaixo do nome.");
+    }
+  };
+
+  const criarMotoboy = async () => {
+    const nome = novoNome.trim();
+    if (!nome) {
+      setErro("Escreva o nome do motoboy.");
+      return;
+    }
+    const { error } = await supabase
+      .from("motoboys")
+      .insert({ nome, telefone: novoTelefone.trim() || null });
+    if (error) {
+      setErro("Não foi possível cadastrar o motoboy agora.");
+      return;
+    }
+    setNovoNome("");
+    setNovoTelefone("");
+    await carregar();
+  };
+
+  const alternarAtivo = async (m: MotoboyCadastrado) => {
+    await supabase.from("motoboys").update({ ativo: !m.ativo }).eq("id", m.id);
+    await carregar();
+  };
+
+  const apagarMotoboy = async (id: string) => {
+    await supabase.from("motoboys").delete().eq("id", id);
+    await carregar();
+  };
+
+
 
   useEffect(() => {
     void carregar();
@@ -152,7 +211,80 @@ function AdminPage() {
           <Card value={String(empresas.length)} text="Empresas cadastradas" />
         </div>
 
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Cadastro de motoboys (por convite)</h2>
+          <div className="space-y-2 rounded-xl border border-border bg-card px-4 py-4">
+            <input
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+              placeholder="Nome do motoboy"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
+            <input
+              value={novoTelefone}
+              onChange={(e) => setNovoTelefone(e.target.value)}
+              placeholder="Telefone (opcional)"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
+            <button
+              onClick={criarMotoboy}
+              className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+            >
+              Gerar link de acesso
+            </button>
+            <p className="text-xs text-muted-foreground">
+              Envie o link ao motoboy. Só quem abrir o link consegue usar o app.
+            </p>
+          </div>
+
+          {cadastrados.map((m) => (
+            <article key={m.id} className="space-y-2 rounded-xl border border-border bg-card px-4 py-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">{m.nome}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {m.telefone ? `${m.telefone} · ` : ""}
+                    {m.ativado_em
+                      ? `acesso ativado em ${formatDay(new Date(m.ativado_em).getTime())}`
+                      : "ainda não abriu o link"}
+                    {m.ativo ? "" : " · desativado"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-3">
+                  <button
+                    onClick={() => copiarLink(m.token)}
+                    className="text-xs font-semibold text-primary underline"
+                  >
+                    Copiar link
+                  </button>
+                  <button
+                    onClick={() => alternarAtivo(m)}
+                    className="text-xs text-muted-foreground underline"
+                  >
+                    {m.ativo ? "Desativar" : "Reativar"}
+                  </button>
+                  <button
+                    onClick={() => apagarMotoboy(m.id)}
+                    className="text-xs text-muted-foreground underline"
+                  >
+                    Apagar
+                  </button>
+                </div>
+              </div>
+              <p className="break-all rounded-lg bg-secondary px-2 py-1 text-[11px] text-secondary-foreground">
+                {linkDe(m.token)}
+              </p>
+            </article>
+          ))}
+          {cadastrados.length === 0 && (
+            <p className="rounded-xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
+              Nenhum motoboy cadastrado ainda.
+            </p>
+          )}
+        </section>
+
         <section className="space-y-2">
+
           <h2 className="text-sm font-semibold">Motoboys</h2>
           {motoboys.length === 0 ? (
             <p className="rounded-xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">

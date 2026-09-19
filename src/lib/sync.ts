@@ -1,13 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pushEmpresasPendentes } from "./empresas";
+import { loadMotoboy } from "./motoboy";
 import { getDeviceId, loadTrips, saveTrips, type GeoPoint, type Trip } from "./trips";
 
 /** Envia uma corrida finalizada para o painel do administrador. */
 async function pushTrip(trip: Trip): Promise<boolean> {
   try {
+    const motoboy = loadMotoboy();
     const { error } = await supabase.from("corridas").insert({
       device_id: trip.deviceId || getDeviceId(),
+      motoboy_ref: motoboy?.id ?? null,
+      motoboy_nome: motoboy?.nome ?? null,
       device_trip_id: trip.id,
+
       label: trip.label,
       started_at: new Date(trip.startedAt).toISOString(),
       ended_at: trip.endedAt ? new Date(trip.endedAt).toISOString() : null,
@@ -62,14 +67,18 @@ export async function pushPosition(point: GeoPoint, emCorrida: boolean) {
   if (agora - ultimoEnvio < 60000) return;
   ultimoEnvio = agora;
   try {
+    const motoboy = loadMotoboy();
     await supabase.from("posicoes").insert({
       device_id: getDeviceId(),
+      motoboy_ref: motoboy?.id ?? null,
+      motoboy_nome: motoboy?.nome ?? null,
       lat: point.lat,
       lng: point.lng,
       acc: point.acc ?? null,
       em_corrida: emCorrida,
       registrado_em: new Date(point.t).toISOString(),
     });
+
   } catch {
     ultimoEnvio = 0;
   }

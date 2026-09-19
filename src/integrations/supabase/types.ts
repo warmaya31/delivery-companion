@@ -31,6 +31,7 @@ export type Database = {
           label: string | null
           motoboy_id: string | null
           motoboy_nome: string | null
+          motoboy_ref: string | null
           start_lat: number | null
           start_lng: number | null
           started_at: string
@@ -51,6 +52,7 @@ export type Database = {
           label?: string | null
           motoboy_id?: string | null
           motoboy_nome?: string | null
+          motoboy_ref?: string | null
           start_lat?: number | null
           start_lng?: number | null
           started_at: string
@@ -71,6 +73,7 @@ export type Database = {
           label?: string | null
           motoboy_id?: string | null
           motoboy_nome?: string | null
+          motoboy_ref?: string | null
           start_lat?: number | null
           start_lng?: number | null
           started_at?: string
@@ -81,6 +84,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corridas_motoboy_ref_fkey"
+            columns: ["motoboy_ref"]
+            isOneToOne: false
+            referencedRelation: "motoboys"
             referencedColumns: ["id"]
           },
         ]
@@ -118,6 +128,42 @@ export type Database = {
         }
         Relationships: []
       }
+      motoboys: {
+        Row: {
+          ativado_em: string | null
+          ativo: boolean
+          created_at: string
+          device_id: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          ativado_em?: string | null
+          ativo?: boolean
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          ativado_em?: string | null
+          ativo?: boolean
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       posicoes: {
         Row: {
           acc: number | null
@@ -128,6 +174,7 @@ export type Database = {
           lng: number
           motoboy_id: string | null
           motoboy_nome: string | null
+          motoboy_ref: string | null
           registrado_em: string
         }
         Insert: {
@@ -139,6 +186,7 @@ export type Database = {
           lng: number
           motoboy_id?: string | null
           motoboy_nome?: string | null
+          motoboy_ref?: string | null
           registrado_em?: string
         }
         Update: {
@@ -150,9 +198,18 @@ export type Database = {
           lng?: number
           motoboy_id?: string | null
           motoboy_nome?: string | null
+          motoboy_ref?: string | null
           registrado_em?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "posicoes_motoboy_ref_fkey"
+            columns: ["motoboy_ref"]
+            isOneToOne: false
+            referencedRelation: "motoboys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -201,6 +258,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ativar_convite: {
+        Args: { _device_id: string; _token: string }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
