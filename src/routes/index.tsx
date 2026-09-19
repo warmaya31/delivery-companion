@@ -32,6 +32,14 @@ import {
   type ResultadoBusca,
 } from "@/lib/empresas";
 import { pushPosition, syncPendingTrips } from "@/lib/sync";
+import {
+  ativarConvite,
+  conviteDaUrl,
+  loadMotoboy,
+  saveMotoboy,
+  type MotoboyLocal,
+} from "@/lib/motoboy";
+
 
 const TripMap = lazy(() => import("@/components/TripMap"));
 
