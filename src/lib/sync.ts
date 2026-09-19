@@ -26,6 +26,7 @@ async function pushTrip(trip: Trip): Promise<boolean> {
       empresa_nome: trip.empresaNome ?? null,
       entregue_em: trip.entregueEm ? new Date(trip.entregueEm).toISOString() : null,
       base_to_end_m: trip.baseToEndM,
+      valor: trip.valor ?? null,
     });
 
     // 23505 = já existia no painel; considera enviada

@@ -86,7 +86,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Tab = "corrida" | "empresas" | "historico" | "config";
+type Tab = "corrida" | "historico" | "config";
 
 function Index() {
   const [tab, setTab] = useState<Tab>("corrida");
@@ -96,7 +96,8 @@ function Index() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [active, setActive] = useState<Trip | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [label, setLabel] = useState("");
+  const [empresaSelecionada, setEmpresaSelecionada] = useState("");
+  const [valorCorrida, setValorCorrida] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [current, setCurrent] = useState<GeoPoint | null>(null);
   const [pending, setPending] = useState(0);
@@ -252,10 +253,11 @@ function Index() {
 
   const startTrip = () => {
     const now = Date.now();
+    const emp = empresasRef.current.find((e) => e.id === empresaSelecionada);
     const trip: Trip = {
       id: `t_${now.toString(36)}`,
       deviceId: deviceId || getDeviceId(),
-      label: label.trim() || "Entrega sem identificação",
+      label: emp ? emp.nome : "Entrega sem identificação",
       startedAt: now,
       endedAt: null,
       distanceM: 0,
@@ -265,13 +267,15 @@ function Index() {
       baseToEndM: base && current ? haversineM(base, current) : null,
       leftBase: false,
       returnedToBase: false,
-      empresaId: null,
-      empresaNome: null,
+      empresaId: emp ? emp.id : null,
+      empresaNome: emp ? emp.nome : null,
       entregueEm: null,
+      valor: valorCorrida ? parseFloat(valorCorrida.replace(',', '.')) : null,
       pendingSync: true,
     };
     persistActive(trip);
-    setLabel("");
+    setEmpresaSelecionada("");
+    setValorCorrida("");
   };
 
   const finishTrip = () => {
@@ -343,7 +347,6 @@ function Index() {
         {(
           [
             ["corrida", "Corrida"],
-            ["empresas", "Empresas"],
             ["historico", "Histórico"],
             ["config", "Ajustes"],
           ] as const
@@ -376,19 +379,12 @@ function Index() {
             current={current}
             empresas={empresas}
             elapsed={elapsed}
-            label={label}
-            onLabel={setLabel}
+            empresaSelecionada={empresaSelecionada}
+            onEmpresaSelecionada={setEmpresaSelecionada}
+            valorCorrida={valorCorrida}
+            onValorCorrida={setValorCorrida}
             onStart={startTrip}
             onFinish={finishTrip}
-          />
-        )}
-
-        {tab === "empresas" && (
-          <EmpresasTab
-            empresas={empresas}
-            current={current}
-            onChange={setEmpresas}
-            onStatus={setStatus}
           />
         )}
 
@@ -429,8 +425,10 @@ function TripTab({
   current,
   empresas,
   elapsed,
-  label,
-  onLabel,
+  empresaSelecionada,
+  onEmpresaSelecionada,
+  valorCorrida,
+  onValorCorrida,
   onStart,
   onFinish,
 }: {
@@ -439,8 +437,10 @@ function TripTab({
   current: GeoPoint | null;
   empresas: Empresa[];
   elapsed: number;
-  label: string;
-  onLabel: (v: string) => void;
+  empresaSelecionada: string;
+  onEmpresaSelecionada: (v: string) => void;
+  valorCorrida: string;
+  onValorCorrida: (v: string) => void;
   onStart: () => void;
   onFinish: () => void;
 }) {
@@ -524,26 +524,44 @@ function TripTab({
       ) : (
         <>
           <label className="block">
-            <span className="text-sm text-muted-foreground">
-              Identificação da entrega (opcional)
+            <span className="text-sm font-medium text-muted-foreground">
+              Empresa de Destino
+            </span>
+            <select
+              value={empresaSelecionada}
+              onChange={(e) => onEmpresaSelecionada(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-input bg-card px-4 py-3.5 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
+            >
+              <option value="">Selecione a empresa...</option>
+              {empresas.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block mt-4">
+            <span className="text-sm font-medium text-muted-foreground">
+              Valor da Corrida (opcional)
             </span>
             <input
-              value={label}
-              onChange={(e) => onLabel(e.target.value)}
-              placeholder="Nº do pedido ou cliente"
-              className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-3 text-base outline-none focus:ring-2 focus:ring-ring"
+              type="number"
+              step="0.01"
+              value={valorCorrida}
+              onChange={(e) => onValorCorrida(e.target.value)}
+              placeholder="R$ 0,00"
+              className="mt-1.5 w-full rounded-xl border border-input bg-card px-4 py-3.5 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
             />
           </label>
           <button
             onClick={onStart}
-            className="w-full rounded-xl bg-primary px-4 py-5 text-lg font-bold text-primary-foreground"
+            className="mt-6 w-full rounded-xl bg-primary px-4 py-5 text-lg font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]"
           >
             Iniciar corrida
           </button>
           {!base && (
-            <p className="text-xs text-muted-foreground">
-              Dica: cadastre a base da operação em Ajustes para o app medir a ida e a volta
-              automaticamente.
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Dica: cadastre a base da operação em Ajustes para o app medir a ida e a volta automaticamente.
             </p>
           )}
         </>
@@ -766,7 +784,10 @@ function HistoryTab({ trips, pending }: { trips: Trip[]; pending: number }) {
             <article key={t.id} className="rounded-xl border border-border bg-card px-4 py-3">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-sm font-semibold">{t.label}</p>
-                <p className="text-sm font-bold tabular-nums">{formatKm(t.distanceM)} km</p>
+                <div className="text-right">
+                  <p className="text-sm font-bold tabular-nums">{formatKm(t.distanceM)} km</p>
+                  <p className="text-sm font-bold text-emerald-600">{t.valor ? `R$ ${t.valor.toFixed(2)}` : '-'}</p>
+                </div>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {formatTime(t.startedAt)}

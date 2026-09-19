@@ -23,6 +23,7 @@ export type Trip = {
   empresaId?: string | null;
   empresaNome?: string | null;
   entregueEm?: number | null;
+  valor?: number | null;
   pendingSync: boolean;
 };
 

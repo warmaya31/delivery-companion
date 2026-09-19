@@ -35,6 +35,7 @@ export type Database = {
           start_lat: number | null
           start_lng: number | null
           started_at: string
+          valor: number | null
         }
         Insert: {
           base_to_end_m?: number | null
@@ -56,6 +57,7 @@ export type Database = {
           start_lat?: number | null
           start_lng?: number | null
           started_at: string
+          valor?: number | null
         }
         Update: {
           base_to_end_m?: number | null
@@ -77,6 +79,7 @@ export type Database = {
           start_lat?: number | null
           start_lng?: number | null
           started_at?: string
+          valor?: number | null
         }
         Relationships: [
           {

@@ -1,0 +1,1 @@
+ALTER TABLE corridas ADD COLUMN IF NOT EXISTS valor numeric;
