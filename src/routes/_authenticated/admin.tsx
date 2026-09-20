@@ -58,6 +58,23 @@ type Corrida = {
   valor: number | null;
 };
 
+const JANELAS = [
+  { min: 5, label: "5 min" },
+  { min: 15, label: "15 min" },
+  { min: 30, label: "30 min" },
+  { min: 60, label: "1 h" },
+  { min: 120, label: "2 h" },
+  { min: 180, label: "3 h" },
+  { min: 300, label: "5 h" },
+];
+
+function textoDuracao(minutos: number) {
+  if (minutos < 60) return `${minutos} min`;
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 type MotoboyCadastrado = {
   id: string;
   nome: string;
@@ -83,6 +100,8 @@ function AdminPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [cadastrados, setCadastrados] = useState<MotoboyCadastrado[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [agora, setAgora] = useState(() => Date.now());
+  const [janelaMin, setJanelaMin] = useState(15);
 
   // Empresa search states
   const [busca, setBusca] = useState("");
@@ -137,7 +156,11 @@ function AdminPage() {
   useEffect(() => {
     void carregar();
     const id = window.setInterval(() => void carregar(), 30000);
-    return () => window.clearInterval(id);
+    const idt = window.setInterval(() => setAgora(Date.now()), 30000);
+    return () => {
+      window.clearInterval(id);
+      window.clearInterval(idt);
+    };
   }, [carregar]);
 
   const linkDe = (token: string) =>
@@ -313,15 +336,21 @@ function AdminPage() {
   const motoboys: MotoboyMarcador[] = useMemo(() => {
     const vistos = new Map<string, Posicao>();
     for (const p of posicoes) if (!vistos.has(p.device_id)) vistos.set(p.device_id, p);
-    return [...vistos.values()].map((p) => ({
-      deviceId: p.device_id,
-      nome: p.motoboy_nome ?? `Motoboy ${p.device_id.slice(-4)}`,
-      lat: p.lat,
-      lng: p.lng,
-      emCorrida: p.em_corrida,
-      quando: formatTime(new Date(p.registrado_em).getTime()),
-    }));
-  }, [posicoes]);
+    return [...vistos.values()].map((p) => {
+      const t = new Date(p.registrado_em).getTime();
+      const minutos = Math.max(0, Math.round((agora - t) / 60000));
+      return {
+        deviceId: p.device_id,
+        nome: p.motoboy_nome ?? `Motoboy ${p.device_id.slice(-4)}`,
+        lat: p.lat,
+        lng: p.lng,
+        emCorrida: p.em_corrida,
+        quando: formatTime(t),
+        online: minutos <= janelaMin,
+        desdeTexto: textoDuracao(minutos),
+      };
+    });
+  }, [posicoes, agora, janelaMin]);
 
   const entregas: EntregaMarcador[] = useMemo(
     () =>
@@ -422,8 +451,8 @@ function AdminPage() {
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
-                value={String(motoboys.length)}
-                label="Motoboys Online"
+                value={String(motoboys.filter((m) => m.online).length)}
+                label="Motoboys Ao Vivo"
                 accent="blue"
                 icon="📍"
               />
@@ -447,11 +476,44 @@ function AdminPage() {
               />
             </div>
 
-            <ClientOnly fallback={fallback}>
-              <Suspense fallback={fallback}>
-                <AdminMap motoboys={motoboys} empresas={empresas} entregas={entregas} />
-              </Suspense>
-            </ClientOnly>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" /> ao vivo
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600" /> em corrida
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-500" /> inativo
+                  </span>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  Considerar ao vivo até
+                  <select
+                    value={janelaMin}
+                    onChange={(e) => setJanelaMin(Number(e.target.value))}
+                    className="rounded-md border border-border bg-card px-2 py-1 text-xs font-semibold text-foreground"
+                  >
+                    {JANELAS.map((j) => (
+                      <option key={j.min} value={j.min}>
+                        {j.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <ClientOnly fallback={fallback}>
+                <Suspense fallback={fallback}>
+                  <AdminMap motoboys={motoboys} empresas={empresas} entregas={entregas} />
+                </Suspense>
+              </ClientOnly>
+              <p className="text-xs text-muted-foreground">
+                {motoboys.filter((m) => m.online).length} ao vivo ·{" "}
+                {motoboys.filter((m) => !m.online).length} inativo(s)
+              </p>
+            </div>
 
             <section className="space-y-3">
               <h2 className="text-base font-bold">Corridas Recentes</h2>
