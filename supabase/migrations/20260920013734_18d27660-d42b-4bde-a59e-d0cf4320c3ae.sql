@@ -1,0 +1,1 @@
+ALTER TABLE public.corridas ADD COLUMN IF NOT EXISTS valor numeric, ADD COLUMN IF NOT EXISTS destinos jsonb;

@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           base_to_end_m: number | null
           created_at: string
+          destinos: Json | null
           device_id: string
           device_trip_id: string
           distance_m: number
@@ -35,10 +36,12 @@ export type Database = {
           start_lat: number | null
           start_lng: number | null
           started_at: string
+          valor: number | null
         }
         Insert: {
           base_to_end_m?: number | null
           created_at?: string
+          destinos?: Json | null
           device_id: string
           device_trip_id: string
           distance_m?: number
@@ -56,10 +59,12 @@ export type Database = {
           start_lat?: number | null
           start_lng?: number | null
           started_at: string
+          valor?: number | null
         }
         Update: {
           base_to_end_m?: number | null
           created_at?: string
+          destinos?: Json | null
           device_id?: string
           device_trip_id?: string
           distance_m?: number
@@ -77,6 +82,7 @@ export type Database = {
           start_lat?: number | null
           start_lng?: number | null
           started_at?: string
+          valor?: number | null
         }
         Relationships: [
           {
