@@ -253,7 +253,7 @@ function Index() {
             empresaNome: updatedDestinos.map((d) => d.empresaNome).join(", "),
             entregueEm: updatedDestinos.every((d) => d.entregueEm)
               ? point.t
-              : trip.entregueEm,
+              : trip.entregueEm ?? null,
           };
           setActive(updated);
           saveActiveTrip(updated);
@@ -286,7 +286,7 @@ function Index() {
       baseToEndM: b ? haversineM(b, point) : null,
       leftBase,
       returnedToBase,
-      destinos: updatedDestinos.length > 0 ? updatedDestinos : trip.destinos,
+      destinos: updatedDestinos.length > 0 ? updatedDestinos : trip.destinos ?? [],
       empresaId,
       empresaNome,
       entregueEm,
@@ -344,7 +344,7 @@ function Index() {
       baseToEndM: base && current ? haversineM(base, current) : null,
       leftBase: false,
       returnedToBase: false,
-      empresaId: temDestinos ? (destinos[0].empresaId || null) : null,
+      empresaId: temDestinos ? destinos[0]?.empresaId ?? null : null,
       empresaNome: temDestinos ? destinos.map((d) => d.empresaNome).join(", ") : null,
       entregueEm: null,
       valor: totalValor,
