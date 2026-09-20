@@ -83,6 +83,8 @@ function AdminPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [cadastrados, setCadastrados] = useState<MotoboyCadastrado[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [agora, setAgora] = useState(() => Date.now());
+  const [janelaMin, setJanelaMin] = useState(15);
 
   // Empresa search states
   const [busca, setBusca] = useState("");
