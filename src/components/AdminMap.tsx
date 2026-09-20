@@ -11,6 +11,8 @@ export type MotoboyMarcador = {
   lng: number;
   emCorrida: boolean;
   quando: string;
+  online: boolean;
+  desdeTexto: string;
 };
 
 export type EntregaMarcador = {
