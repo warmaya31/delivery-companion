@@ -313,15 +313,21 @@ function AdminPage() {
   const motoboys: MotoboyMarcador[] = useMemo(() => {
     const vistos = new Map<string, Posicao>();
     for (const p of posicoes) if (!vistos.has(p.device_id)) vistos.set(p.device_id, p);
-    return [...vistos.values()].map((p) => ({
-      deviceId: p.device_id,
-      nome: p.motoboy_nome ?? `Motoboy ${p.device_id.slice(-4)}`,
-      lat: p.lat,
-      lng: p.lng,
-      emCorrida: p.em_corrida,
-      quando: formatTime(new Date(p.registrado_em).getTime()),
-    }));
-  }, [posicoes]);
+    return [...vistos.values()].map((p) => {
+      const t = new Date(p.registrado_em).getTime();
+      const minutos = Math.max(0, Math.round((agora - t) / 60000));
+      return {
+        deviceId: p.device_id,
+        nome: p.motoboy_nome ?? `Motoboy ${p.device_id.slice(-4)}`,
+        lat: p.lat,
+        lng: p.lng,
+        emCorrida: p.em_corrida,
+        quando: formatTime(t),
+        online: minutos <= janelaMin,
+        desdeTexto: textoDuracao(minutos),
+      };
+    });
+  }, [posicoes, agora, janelaMin]);
 
   const entregas: EntregaMarcador[] = useMemo(
     () =>
