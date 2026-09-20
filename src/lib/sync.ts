@@ -7,20 +7,22 @@ import { getDeviceId, loadTrips, saveTrips, type GeoPoint, type Trip } from "./t
 async function pushTrip(trip: Trip): Promise<boolean> {
   try {
     const motoboy = loadMotoboy();
-    const temDestinos = trip.destinos && trip.destinos.length > 0;
+    const destinos = trip.destinos ?? [];
+    const temDestinos = destinos.length > 0;
+    const primeiro = destinos[0];
     const empresaNomeResumo = temDestinos
-      ? trip.destinos!.map((d) => d.empresaNome).join(", ")
+      ? destinos.map((d) => d.empresaNome).join(", ")
       : trip.empresaNome ?? null;
 
     const totalValor = temDestinos
-      ? trip.destinos!.reduce((sum, d) => sum + (d.valor ?? 0), 0)
+      ? destinos.reduce((sum, d) => sum + (d.valor ?? 0), 0)
       : trip.valor ?? null;
 
     const primaryEmpresaId =
       trip.empresaId && !trip.empresaId.startsWith("local_")
         ? trip.empresaId
-        : temDestinos && !trip.destinos![0].empresaId.startsWith("local_")
-          ? trip.destinos![0].empresaId
+        : primeiro && !primeiro.empresaId.startsWith("local_")
+          ? primeiro.empresaId
           : null;
 
     const { error } = await supabase.from("corridas").insert({
