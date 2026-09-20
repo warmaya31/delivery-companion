@@ -58,6 +58,23 @@ type Corrida = {
   valor: number | null;
 };
 
+const JANELAS = [
+  { min: 5, label: "5 min" },
+  { min: 15, label: "15 min" },
+  { min: 30, label: "30 min" },
+  { min: 60, label: "1 h" },
+  { min: 120, label: "2 h" },
+  { min: 180, label: "3 h" },
+  { min: 300, label: "5 h" },
+];
+
+function textoDuracao(minutos: number) {
+  if (minutos < 60) return `${minutos} min`;
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 type MotoboyCadastrado = {
   id: string;
   nome: string;
