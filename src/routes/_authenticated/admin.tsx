@@ -139,7 +139,11 @@ function AdminPage() {
   useEffect(() => {
     void carregar();
     const id = window.setInterval(() => void carregar(), 30000);
-    return () => window.clearInterval(id);
+    const idt = window.setInterval(() => setAgora(Date.now()), 30000);
+    return () => {
+      window.clearInterval(id);
+      window.clearInterval(idt);
+    };
   }, [carregar]);
 
   const linkDe = (token: string) =>
