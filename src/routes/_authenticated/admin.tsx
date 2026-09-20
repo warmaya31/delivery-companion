@@ -451,8 +451,8 @@ function AdminPage() {
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
-                value={String(motoboys.length)}
-                label="Motoboys Online"
+                value={String(motoboys.filter((m) => m.online).length)}
+                label="Motoboys Ao Vivo"
                 accent="blue"
                 icon="📍"
               />
