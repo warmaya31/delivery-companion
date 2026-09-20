@@ -476,11 +476,44 @@ function AdminPage() {
               />
             </div>
 
-            <ClientOnly fallback={fallback}>
-              <Suspense fallback={fallback}>
-                <AdminMap motoboys={motoboys} empresas={empresas} entregas={entregas} />
-              </Suspense>
-            </ClientOnly>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" /> ao vivo
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600" /> em corrida
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-500" /> inativo
+                  </span>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  Considerar ao vivo até
+                  <select
+                    value={janelaMin}
+                    onChange={(e) => setJanelaMin(Number(e.target.value))}
+                    className="rounded-md border border-border bg-card px-2 py-1 text-xs font-semibold text-foreground"
+                  >
+                    {JANELAS.map((j) => (
+                      <option key={j.min} value={j.min}>
+                        {j.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <ClientOnly fallback={fallback}>
+                <Suspense fallback={fallback}>
+                  <AdminMap motoboys={motoboys} empresas={empresas} entregas={entregas} />
+                </Suspense>
+              </ClientOnly>
+              <p className="text-xs text-muted-foreground">
+                {motoboys.filter((m) => m.online).length} ao vivo ·{" "}
+                {motoboys.filter((m) => !m.online).length} inativo(s)
+              </p>
+            </div>
 
             <section className="space-y-3">
               <h2 className="text-base font-bold">Corridas Recentes</h2>
