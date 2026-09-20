@@ -96,10 +96,11 @@ export default function AdminMap({ motoboys, empresas, entregas }: Props) {
 
     for (const m of motoboys) {
       pontos.push([m.lat, m.lng]);
+      const cor = m.online ? (m.emCorrida ? "#2563eb" : "#16a34a") : "#6b7280";
       const iconHtml = `
-        <div class="relative flex h-10 w-10 items-center justify-center">
-          ${m.emCorrida ? '<div class="absolute inset-0 animate-ping rounded-full bg-blue-400 opacity-30"></div>' : ''}
-          <div class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-blue-600 shadow-md">
+        <div class="relative flex h-10 w-10 items-center justify-center" style="${m.online ? "" : "opacity:0.65"}">
+          ${m.online && m.emCorrida ? '<div class="absolute inset-0 animate-ping rounded-full bg-blue-400 opacity-30"></div>' : ''}
+          <div class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow-md" style="background:${cor}">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v10H2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
           </div>
         </div>
