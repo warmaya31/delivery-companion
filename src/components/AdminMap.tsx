@@ -114,7 +114,15 @@ export default function AdminMap({ motoboys, empresas, entregas }: Props) {
 
       L.marker([m.lat, m.lng], { icon: motoboyIcon })
         .addTo(layer)
-        .bindTooltip(`${m.nome} · ${m.quando}`, { permanent: true, direction: "top", offset: [0, -16], className: "bg-background text-foreground border-border font-semibold shadow-sm rounded-md" });
+        .bindTooltip(
+          `${m.nome} · ${m.online ? `ao vivo · ${m.quando}` : `inativo há ${m.desdeTexto}`}`,
+          {
+            permanent: true,
+            direction: "top",
+            offset: [0, -16],
+            className: "bg-background text-foreground border-border font-semibold shadow-sm rounded-md",
+          },
+        );
     }
 
     if (!ajustadoRef.current && pontos.length > 0) {
