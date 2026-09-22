@@ -505,12 +505,11 @@ function AdminPage() {
               </div>
               <ClientOnly fallback={fallback}>
                 <Suspense fallback={fallback}>
-                  <AdminMap motoboys={motoboys} empresas={empresas} entregas={entregas} />
+                  <AdminMap motoboys={motoboysAoVivo} empresas={empresas} entregas={entregas} />
                 </Suspense>
               </ClientOnly>
               <p className="text-xs text-muted-foreground">
-                {motoboys.filter((m) => m.online).length} ao vivo ·{" "}
-                {motoboys.filter((m) => !m.online).length} inativo(s)
+                {motoboysAoVivo.length} motoboy(s) ao vivo no mapa
               </p>
             </div>
 
