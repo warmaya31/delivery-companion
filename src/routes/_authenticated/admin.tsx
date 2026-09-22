@@ -487,9 +487,6 @@ function AdminPage() {
                   <span className="flex items-center gap-1">
                     <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600" /> em corrida
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-500" /> inativo
-                  </span>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   Considerar ao vivo até
