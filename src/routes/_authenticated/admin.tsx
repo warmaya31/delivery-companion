@@ -515,7 +515,7 @@ function AdminPage() {
 
             <section className="space-y-3">
               <h2 className="text-base font-bold">Corridas Recentes</h2>
-              {corridas.length === 0 ? (
+              {corridasAoVivo.length === 0 ? (
                 <EmptyState text="Nenhuma corrida enviada ainda." />
               ) : (
                 <div className="grid gap-2">
