@@ -428,7 +428,7 @@ function AdminPage() {
               <span className="text-2xl">🏍️</span> Painel Administrativo
             </h1>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {carregando ? "Sincronizando…" : `${motoboys.length} motoboy(s) · ${empresas.length} empresa(s) · ${corridas.length} corrida(s)`}
+              {carregando ? "Sincronizando…" : `${motoboysAoVivo.length} motoboy(s) ao vivo · ${empresas.length} empresa(s) · ${corridas.length} corrida(s)`}
             </p>
           </div>
           <button
