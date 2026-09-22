@@ -519,7 +519,7 @@ function AdminPage() {
                 <EmptyState text="Nenhuma corrida enviada ainda." />
               ) : (
                 <div className="grid gap-2">
-                  {corridas.slice(0, 8).map((c) => (
+                  {corridasAoVivo.slice(0, 8).map((c) => (
                     <TripCard key={c.id} c={c} />
                   ))}
                 </div>
