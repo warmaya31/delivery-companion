@@ -352,6 +352,18 @@ function AdminPage() {
     });
   }, [posicoes, agora, janelaMin]);
 
+  const motoboysAoVivo = useMemo(() => motoboys.filter((m) => m.online), [motoboys]);
+
+  const devicesAoVivo = useMemo(
+    () => new Set(motoboysAoVivo.map((m) => m.deviceId)),
+    [motoboysAoVivo],
+  );
+
+  const corridasAoVivo = useMemo(
+    () => corridas.filter((c) => devicesAoVivo.has(c.device_id)),
+    [corridas, devicesAoVivo],
+  );
+
   const entregas: EntregaMarcador[] = useMemo(
     () =>
       corridas
@@ -416,7 +428,7 @@ function AdminPage() {
               <span className="text-2xl">🏍️</span> Painel Administrativo
             </h1>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {carregando ? "Sincronizando…" : `${motoboys.length} motoboy(s) · ${empresas.length} empresa(s) · ${corridas.length} corrida(s)`}
+              {carregando ? "Sincronizando…" : `${motoboysAoVivo.length} motoboy(s) ao vivo · ${empresas.length} empresa(s) · ${corridas.length} corrida(s)`}
             </p>
           </div>
           <button
@@ -451,7 +463,7 @@ function AdminPage() {
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
-                value={String(motoboys.filter((m) => m.online).length)}
+                value={String(motoboysAoVivo.length)}
                 label="Motoboys Ao Vivo"
                 accent="blue"
                 icon="📍"
@@ -485,9 +497,6 @@ function AdminPage() {
                   <span className="flex items-center gap-1">
                     <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600" /> em corrida
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-500" /> inativo
-                  </span>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   Considerar ao vivo até
@@ -506,22 +515,21 @@ function AdminPage() {
               </div>
               <ClientOnly fallback={fallback}>
                 <Suspense fallback={fallback}>
-                  <AdminMap motoboys={motoboys} empresas={empresas} entregas={entregas} />
+                  <AdminMap motoboys={motoboysAoVivo} empresas={empresas} entregas={entregas} />
                 </Suspense>
               </ClientOnly>
               <p className="text-xs text-muted-foreground">
-                {motoboys.filter((m) => m.online).length} ao vivo ·{" "}
-                {motoboys.filter((m) => !m.online).length} inativo(s)
+                {motoboysAoVivo.length} motoboy(s) ao vivo no mapa
               </p>
             </div>
 
             <section className="space-y-3">
               <h2 className="text-base font-bold">Corridas Recentes</h2>
-              {corridas.length === 0 ? (
+              {corridasAoVivo.length === 0 ? (
                 <EmptyState text="Nenhuma corrida enviada ainda." />
               ) : (
                 <div className="grid gap-2">
-                  {corridas.slice(0, 8).map((c) => (
+                  {corridasAoVivo.slice(0, 8).map((c) => (
                     <TripCard key={c.id} c={c} />
                   ))}
                 </div>
