@@ -354,6 +354,16 @@ function AdminPage() {
 
   const motoboysAoVivo = useMemo(() => motoboys.filter((m) => m.online), [motoboys]);
 
+  const devicesAoVivo = useMemo(
+    () => new Set(motoboysAoVivo.map((m) => m.deviceId)),
+    [motoboysAoVivo],
+  );
+
+  const corridasAoVivo = useMemo(
+    () => corridas.filter((c) => devicesAoVivo.has(c.device_id)),
+    [corridas, devicesAoVivo],
+  );
+
   const entregas: EntregaMarcador[] = useMemo(
     () =>
       corridas
