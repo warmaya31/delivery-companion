@@ -352,6 +352,8 @@ function AdminPage() {
     });
   }, [posicoes, agora, janelaMin]);
 
+  const motoboysAoVivo = useMemo(() => motoboys.filter((m) => m.online), [motoboys]);
+
   const entregas: EntregaMarcador[] = useMemo(
     () =>
       corridas
